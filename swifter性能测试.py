@@ -18,4 +18,3 @@ if __name__ == '__main__':
     df.apply(lambda x: x['nums_2'] - x['nums_1'], axis=1).reset_index()
     end = datetime.datetime.now()
     print(end - start)  # 0:00:13.222674
-
