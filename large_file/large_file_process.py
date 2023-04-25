@@ -63,6 +63,72 @@ def multi_mp(df_, n_workers_):
     df_['Description'] = p.map(clean_text, tqdm(df_['Description']))
 
 
+@time_
+def parallel(df_, n_workers_):
+    """
+    CPU time: 15.6875 s
+    Wall time: 214.70771419999983 s
+    :param df_:
+    :param n_workers_:
+    :return:
+    """
+    result = Parallel(n_jobs=n_workers_, backend="multiprocessing")(
+        delayed(clean_text)
+        (text) for text in tqdm(df_['Description'])
+    )
+    return result
+
+
+def proc_batch(batch):
+    return [
+        clean_text(text) for text in batch
+    ]
+
+
+@time_
+def parallel_batch(df_, n_workers_):
+    """
+    CPU time: 2.140625 s
+    Wall time: 216.43949939999948 s
+    :param df_:
+    :param n_workers_:
+    :return:
+    """
+    def batch_file(array):
+        file_len = len(array)
+        batch_size = round(file_len / n_workers_)
+        batches_ = [
+            array[ix: ix + batch_size]
+            for ix in tqdm(range(0, file_len, batch_size))
+        ]
+
+        return batches_
+
+    batches = batch_file(df_['Description'])
+
+    batches_output = Parallel(n_jobs=n_workers_, backend="multiprocessing")(
+        delayed(proc_batch)
+        (batch) for batch in tqdm(batches)
+    )
+
+    df_['Description'] = [j for i in batches_output for j in i]
+
+
+@time_
+def tqdm_parallel(df_, n_workers_):
+    """
+    CPU time: 4.0625 s
+    Wall time: 215.92957169999954 s
+    :param df_:
+    :param n_workers_:
+    :return:
+    """
+    from tqdm.contrib.concurrent import process_map
+    batch = round(len(df_) / n_workers_)
+
+    df_['Description'] = process_map(clean_text, df_['Description'], max_workers=n_workers_, chunksize=batch)
+
+
 if __name__ == "__main__":
 
     n_workers = 2 * mp.cpu_count()
@@ -75,3 +141,6 @@ if __name__ == "__main__":
 
     # serial(df)
     # multi_mp(df, n_workers)
+    # parallel(df, n_workers)
+    # parallel_batch(df, n_workers)
+    tqdm_parallel(df, n_workers)
